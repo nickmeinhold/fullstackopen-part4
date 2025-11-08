@@ -1,8 +1,12 @@
 const blogsRouter = express.Router();
+const Blog = require("../models/blog");
 
 blogsRouter.get("/", async (request, response) => {
   const blogs = await Blog.find({});
   console.log("operation returned the following blogs", blogs);
+  for (const blog in blogs) {
+    blog.populate();
+  }
   response.json(blogs);
 });
 
@@ -21,10 +25,28 @@ blogsRouter.post("/", async (request, response) => {
     blog.likes = 0;
   }
   if (!blog.title || !blog.url) {
-    return response.status(400).end();
+    console.log("title or url missing");
+    return response
+      .status(400)
+      .json({
+        message: "Blog created successfully",
+        data: result,
+      })
+      .end();
   }
-  const result = await blog.save();
-  response.status(201).json(result);
+  try {
+    const result = await blog.save();
+    response.status(201).json(result);
+  } catch (error) {
+    console.log(error);
+    return response
+      .status(500)
+      .json({
+        message: "There was a problem saving the blog",
+        data: error,
+      })
+      .end();
+  }
 });
 
 blogsRouter.delete("/:id", async (request, response) => {
