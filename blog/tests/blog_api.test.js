@@ -70,7 +70,7 @@ test("a valid blog can be added ", async () => {
   assert(author.includes("Test Author"));
 });
 
-test.only("a blog can be deleted", async () => {
+test("a blog can be deleted", async () => {
   const blogsAtStart = await helper.blogsInDb();
   const blogToDelete = blogsAtStart[0];
 
