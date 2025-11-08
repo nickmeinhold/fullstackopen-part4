@@ -9,5 +9,5 @@ Content-Type: application/json
   "title": "Test Blog",
   "author": "Test Author",
   "url": "http://example.com",
-  "likes": 0'
+  "likes": 0
 }
