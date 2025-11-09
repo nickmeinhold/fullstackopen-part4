@@ -1,6 +1,7 @@
 const express = require("express");
 const Blog = require("../models/blog");
 const User = require("../models/user");
+const { tokenExtractor } = require("../utils/middleware");
 
 const blogsRouter = express.Router();
 
@@ -22,12 +23,8 @@ blogsRouter.get("/:id", async (request, response) => {
   }
 });
 
-blogsRouter.post("/", async (request, response) => {
-  const user = request.user; // Access the decoded token here
-
-  if (!user) {
-    return response.status(401).json({ error: "token missing" });
-  }
+blogsRouter.post("/", tokenExtractor, async (request, response) => {
+  const user = request.user; // Already verified by middleware
 
   if (!request.body.title || !request.body.url) {
     return response.status(400).json({
@@ -67,12 +64,8 @@ blogsRouter.post("/", async (request, response) => {
   }
 });
 
-blogsRouter.delete("/:id", async (request, response) => {
-  const user = request.user; // Access the decoded token here
-
-  if (!user) {
-    return response.status(401).json({ error: "token missing" });
-  }
+blogsRouter.delete("/:id", tokenExtractor, async (request, response) => {
+  const user = request.user; // Already verified by middleware
 
   const blog = await Blog.findById(request.params.id);
 

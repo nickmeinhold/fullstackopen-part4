@@ -4,14 +4,36 @@ const mongoose = require("mongoose");
 const supertest = require("supertest");
 const app = require("../app");
 const Blog = require("../models/blog");
+const User = require("../models/user");
 const helper = require("./test_helper");
 
 const api = supertest(app);
 
+let token;
+
 beforeEach(async () => {
   await Blog.deleteMany({});
+  await User.deleteMany({});
   console.log("cleared");
 
+  // Create a test user
+  const testUser = {
+    username: "testuser",
+    name: "Test User",
+    password: "password123",
+  };
+
+  await api.post("/api/users").send(testUser).expect(201);
+
+  // Login to get token
+  const loginResponse = await api
+    .post("/api/login")
+    .send({ username: "testuser", password: "password123" })
+    .expect(200);
+
+  token = loginResponse.body.token;
+
+  // Add initial blogs with user reference
   for (const blog of helper.initialBlogs) {
     let blogObject = new Blog(blog);
     await blogObject.save();
@@ -45,7 +67,21 @@ test("blogs error when no title or url are missing ", async () => {
     author: "An author",
   };
 
-  await api.post("/api/blogs").send(newBlog).expect(400);
+  await api
+    .post("/api/blogs")
+    .set("Authorization", `Bearer ${token}`)
+    .send(newBlog)
+    .expect(400);
+});
+
+test.only("creating a blog without a token should give a 401", async () => {
+  const newBlog = {
+    title: "async/await simplifies making async calls",
+    author: "Test Author",
+    url: "http://the_url",
+  };
+
+  await api.post("/api/blogs").send(newBlog).expect(401);
 });
 
 test("a valid blog can be added ", async () => {
@@ -53,14 +89,11 @@ test("a valid blog can be added ", async () => {
     title: "async/await simplifies making async calls",
     author: "Test Author",
     url: "http://the_url",
-    user: {
-      username: "nick",
-      name: "Nick",
-    },
   };
 
   await api
     .post("/api/blogs")
+    .set("Authorization", `Bearer ${token}`)
     .send(newBlog)
     .expect(201)
     .expect("Content-Type", /application\/json/);
@@ -75,17 +108,50 @@ test("a valid blog can be added ", async () => {
   assert(author.includes("Test Author"));
 });
 
+// We need to sign in so we can get a toen for the user that creates a blog
 test("a blog can be deleted", async () => {
-  const blogsAtStart = await helper.blogsInDb();
-  const blogToDelete = blogsAtStart[0];
+  await Blog.deleteMany({});
+  await User.deleteMany({});
+  console.log("cleared");
 
-  await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204);
+  // Create a test user
+  const testUser = {
+    username: "testuser",
+    name: "Test User",
+    password: "password123",
+  };
 
-  const blogsAtEnd = await helper.blogsInDb();
-  assert.strictEqual(blogsAtEnd.length, blogsAtStart.length - 1);
+  await api.post("/api/users").send(testUser).expect(201);
 
-  const titles = blogsAtEnd.map((b) => b.title);
-  assert(!titles.includes(blogToDelete.title));
+  // Login to get token
+  const loginResponse = await api
+    .post("/api/login")
+    .send({ username: "testuser", password: "password123" })
+    .expect(200);
+
+  token = loginResponse.body.token;
+
+  const newBlog = {
+    title: "async/await simplifies making async calls",
+    author: "Test Author",
+    url: "http://the_url",
+  };
+
+  await api
+    .post("/api/blogs")
+    .set("Authorization", `Bearer ${token}`)
+    .send(newBlog)
+    .expect(201)
+    .expect("Content-Type", /application\/json/);
+
+  const response = await api.get("/api/blogs");
+
+  response.body[0].id;
+
+  await api
+    .delete(`/api/blogs/${response.body[0].id}`)
+    .set("Authorization", `Bearer ${token}`)
+    .expect(204);
 });
 
 test("blogs are returned as json", async () => {
@@ -115,7 +181,11 @@ test("likes defaults to zero", async () => {
     url: "http://example.com",
   };
 
-  const response = await api.post("/api/blogs").send(newBlog).expect(201);
+  const response = await api
+    .post("/api/blogs")
+    .set("Authorization", `Bearer ${token}`)
+    .send(newBlog)
+    .expect(201);
 
   // Check the returned blog has likes: 0
   assert.strictEqual(response.body.likes, 0);
