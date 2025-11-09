@@ -14,10 +14,9 @@ loginRouter.post("/", async (request, response) => {
     return response.status(404).json({ error: "invalid username" });
   }
 
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash(password, saltRounds);
+  const passwordCorrect = await bcrypt.compare(password, user.passwordHash);
 
-  if (user.passwordHash !== passwordHash) {
+  if (!passwordCorrect) {
     return response.status(401).json({ error: "password was not correct" });
   }
 
