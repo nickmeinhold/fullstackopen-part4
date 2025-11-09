@@ -48,7 +48,7 @@ test("blogs error when no title or url are missing ", async () => {
   await api.post("/api/blogs").send(newBlog).expect(400);
 });
 
-test.only("a valid blog can be added ", async () => {
+test("a valid blog can be added ", async () => {
   const newBlog = {
     title: "async/await simplifies making async calls",
     author: "Test Author",
