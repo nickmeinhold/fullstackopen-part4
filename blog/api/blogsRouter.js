@@ -7,9 +7,8 @@ const logger = require("../utils/logger");
 const blogsRouter = express.Router();
 
 blogsRouter.get("/", async (request, response) => {
-  logger.info("TEST: GET /api/blogs called");
   const blogs = await Blog.find({}).populate("user", { username: 1, name: 1 });
-  logger.info("operation returned the following blogs", blogs);
+  logger.info("Retrieved blogs");
   response.json(blogs);
 });
 
