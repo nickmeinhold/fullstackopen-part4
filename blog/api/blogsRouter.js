@@ -2,12 +2,14 @@ const express = require("express");
 const Blog = require("../models/blog");
 const User = require("../models/user");
 const { tokenExtractor } = require("../utils/middleware");
+const logger = require("../utils/logger");
 
 const blogsRouter = express.Router();
 
 blogsRouter.get("/", async (request, response) => {
+  logger.info("TEST: GET /api/blogs called");
   const blogs = await Blog.find({}).populate("user", { username: 1, name: 1 });
-  console.log("operation returned the following blogs", blogs);
+  logger.info("operation returned the following blogs", blogs);
   response.json(blogs);
 });
 
@@ -29,13 +31,16 @@ blogsRouter.post("/", tokenExtractor, async (request, response) => {
   if (!request.body.title || !request.body.url) {
     return response.status(400).json({
       message: "Missing title or url",
-      data: result,
     });
   }
 
   try {
     // Get the user from the database using the decoded token
     const foundUser = await User.findById(user.id);
+
+    if (!foundUser) {
+      return response.status(401).json({ error: "user not found" });
+    }
 
     const blog = new Blog({
       title: request.body.title,
