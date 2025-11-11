@@ -35,9 +35,15 @@ blogsRouter.post("/", tokenExtractor, async (request, response) => {
 
   try {
     // Get the user from the database using the decoded token
+    if (!user || !user.id) {
+      logger.error("Token user missing or user.id undefined:", user);
+      return response.status(401).json({ error: "invalid token" });
+    }
+
     const foundUser = await User.findById(user.id);
 
     if (!foundUser) {
+      logger.error("User not found in database for id:", user.id);
       return response.status(401).json({ error: "user not found" });
     }
 
@@ -95,7 +101,7 @@ blogsRouter.put("/:id", async (request, response) => {
     request.params.id,
     { title, author, url, likes },
     { new: true, runValidators: true }
-  );
+  ).populate("user", { username: 1, name: 1 });
 
   if (updatedBlog) {
     response.json(updatedBlog);
